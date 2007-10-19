@@ -1,5 +1,6 @@
 PROG=	idt_test
 SRCS+=	${PROG}.c
+SRCS+=	ez_writer.c
 SRCS+=	serial.c
 SRCS+=	string_set.c
 NOMAN=	t

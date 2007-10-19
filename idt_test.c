@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "ez_writer.h"
 #include "serial.h"
 #include "string_set.h"
 
@@ -30,6 +31,13 @@ main(void)
 		fprintf(stderr, "Unable to attach serial port.\n");
 		return (1);
 	}
+
+	if (!ez_writer_initialize(&sport)) {
+		fprintf(stderr, "Unable to initialize EZ Writer.\n");
+		return (1);
+	}
+	fprintf(stderr, "Initialized EZ Writer.\n");
+
 	return (0);
 }
 

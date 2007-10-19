@@ -1,11 +1,15 @@
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #include <sys/param.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <regex.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include "serial.h"
 #include "string_set.h"
@@ -17,17 +21,95 @@
 bool
 serial_port_open(struct serial_port *sport, const char *name)
 {
+	//struct termios control;
 	char path[MAXPATHLEN];
+	//int error;
 	int fd;
 
 	sport->sp_fd = -1;
 
 	snprintf(path, sizeof path, SERIAL_DEVICE_FORMAT, name);
-	fd = open(path, O_RDWR);
+	fd = open(path, O_RDWR | /*O_NONBLOCK | */O_NOCTTY);
 	if (fd == -1)
 		return (false);
 	sport->sp_fd = fd;
 
+#if 0
+	error = ioctl(sport->sp_fd, TIOCEXCL);
+	if (error != 0) {
+		close(sport->sp_fd);
+		sport->sp_fd = -1;
+		return (false);
+	}
+
+	error = tcgetattr(sport->sp_fd, &control);
+	if (error != 0) {
+		close(sport->sp_fd);
+		sport->sp_fd = -1;
+		return (false);
+	}
+
+	cfmakeraw(&control);
+
+	error = cfsetspeed(&control, B9600);
+	if (error != 0) {
+		close(sport->sp_fd);
+		sport->sp_fd = -1;
+		return (false);
+	}
+
+	control.c_cflag &= ~PARENB;
+	control.c_cflag &= ~CSTOPB;
+	control.c_cflag &= ~CSIZE;
+	control.c_cflag |= CS8;
+	control.c_cflag |= CLOCAL;
+	control.c_cflag |= CREAD;
+
+	control.c_iflag |= IXON | IXOFF;
+
+	control.c_cc[VMIN] = 1;
+	control.c_cc[VTIME] = 0;
+
+	error = tcsetattr(sport->sp_fd, TCSAFLUSH, &control);
+	if (error != 0) {
+		close(sport->sp_fd);
+		sport->sp_fd = -1;
+		return (false);
+	}
+#endif
+
+	return (true);
+}
+
+bool
+serial_port_read(struct serial_port *sport, char *buf, size_t len)
+{
+	ssize_t rv;
+
+	if (sport->sp_fd == -1)
+		return (false);
+
+	rv = read(sport->sp_fd, buf, len);
+	if (rv == -1)
+		return (false);
+	if (len != (size_t)rv)
+		return (false);
+	return (true);
+}
+
+bool
+serial_port_write(struct serial_port *sport, const char *buf, size_t len)
+{
+	ssize_t rv;
+
+	if (sport->sp_fd == -1)
+		return (false);
+
+	rv = write(sport->sp_fd, buf, len);
+	if (rv == -1)
+		return (false);
+	if (len != (size_t)rv)
+		return (false);
 	return (true);
 }
 
