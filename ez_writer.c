@@ -9,6 +9,11 @@
 
 #define	EZ_WRITER_ESCAPE	'\x1b'
 
+static const char ez_writer_ram_test_string[] = {
+	EZ_WRITER_ESCAPE,
+	'\x87'
+};
+
 static const char ez_writer_read_ascii_string[] = {
 	EZ_WRITER_ESCAPE,
 	'r'
@@ -30,6 +35,7 @@ static const char ez_writer_test_string[] = {
 #define	EZ_WRITER_WRITE(sport, buf)					\
 	serial_port_write(sport, buf, sizeof buf / sizeof buf[0])
 
+static bool ez_writer_ram_test(struct serial_port *);
 static bool ez_writer_read_track(struct serial_port *, char *, char *);
 static bool ez_writer_reset_buffer(struct serial_port *);
 static bool ez_writer_test(struct serial_port *);
@@ -41,6 +47,9 @@ ez_writer_initialize(struct serial_port *sport)
 		return (false);
 
 	if (!ez_writer_test(sport))
+		return (false);
+
+	if (!ez_writer_ram_test(sport))
 		return (false);
 
 	if (!ez_writer_reset_buffer(sport))
@@ -121,6 +130,22 @@ ez_writer_read(struct serial_port *sport, struct card_data *cdata)
 			return (false);
 		}
 	}
+}
+
+static bool
+ez_writer_ram_test(struct serial_port *sport)
+{
+	char test_response[2];
+
+	if (!EZ_WRITER_WRITE(sport, ez_writer_ram_test_string))
+		return (false);
+
+	if (!EZ_WRITER_READ(sport, test_response))
+		return (false);
+
+	if (test_response[0] != EZ_WRITER_ESCAPE || test_response[1] != '0')
+		return (false);
+	return (true);
 }
 
 static bool
