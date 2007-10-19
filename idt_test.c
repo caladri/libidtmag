@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "card_data.h"
 #include "ez_writer.h"
 #include "serial.h"
 #include "string_set.h"
@@ -26,6 +27,7 @@ int
 main(void)
 {
 	struct serial_port sport;
+	struct card_data cdata;
 
 	if (!choose_serial_port(&sport)) {
 		fprintf(stderr, "Unable to attach serial port.\n");
@@ -37,6 +39,12 @@ main(void)
 		return (1);
 	}
 	fprintf(stderr, "Initialized EZ Writer.\n");
+
+	fprintf(stderr, "Please swipe a card to read when the LED changes color.\n");
+	if (!ez_writer_read(&sport, &cdata)) {
+		fprintf(stderr, "Failed to read a card.\n");
+		return (1);
+	}
 
 	return (0);
 }
