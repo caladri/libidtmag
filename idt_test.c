@@ -2,6 +2,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "card_data.h"
 #include "ez_writer.h"
@@ -24,11 +26,44 @@ static void pick_serial_port(void *, const char *);
 static void print_serial_port(void *, const char *);
 
 int
-main(void)
+main(int argc, char *argv[])
 {
 	char version[EZ_WRITER_VERSION_LENGTH + 1];
 	struct serial_port sport;
+	bool read, write, erase;
 	struct card_data cdata;
+	int ch;
+
+	memset(&cdata, 0, sizeof cdata);
+	read = write = erase = false;
+
+	while ((ch = getopt(argc, argv, "1:2:3:rwe?")) != -1) {
+		switch (ch) {
+		case '1':
+			strlcpy(cdata.cd_track1, optarg, sizeof cdata.cd_track1);
+			break;
+		case '2':
+			strlcpy(cdata.cd_track2, optarg, sizeof cdata.cd_track2);
+			break;
+		case '3':
+			strlcpy(cdata.cd_track3, optarg, sizeof cdata.cd_track3);
+			break;
+		case 'r':
+			read = true;
+			break;
+		case 'w':
+			write = true;
+			break;
+		case 'e':
+			erase = true;
+			break;
+		case '?':
+		default:
+			return (1);
+		}
+	}
+	argc -= optind;
+	argv += optind;
 
 	if (!choose_serial_port(&sport)) {
 		fprintf(stderr, "Unable to attach serial port.\n");
@@ -47,23 +82,33 @@ main(void)
 	}
 	fprintf(stderr, "Version: %.*s\n", EZ_WRITER_VERSION_LENGTH, version);
 
-	fprintf(stderr, "Swipe a card to read when the LED changes color.\n");
-	if (!ez_writer_read(&sport, &cdata)) {
-		fprintf(stderr, "Failed to read a card.\n");
-		return (1);
-	}
-	card_data_dump(&cdata);
-
-	fprintf(stderr, "Swipe a card to erase when the LED changes color.\n");
-	if (!ez_writer_erase(&sport, 1 | 2 | 3)) {
-		fprintf(stderr, "Failed to erase a card.\n");
-		return (1);
+	if (read) {
+		fprintf(stderr,
+			"Swipe a card to read when the LED changes color.\n");
+		if (!ez_writer_read(&sport, &cdata)) {
+			fprintf(stderr, "Failed to read a card.\n");
+			return (1);
+		}
+		card_data_dump(&cdata);
 	}
 
-	fprintf(stderr, "Swipe a card to write previously-read data to.\n");
-	if (!ez_writer_write(&sport, true, &cdata)) {
-		fprintf(stderr, "Failed to write a card.\n");
-		return (1);
+	if (erase) {
+		fprintf(stderr,
+			"Swipe a card to erase when the LED changes color.\n");
+		if (!ez_writer_erase(&sport, 1 | 2 | 3)) {
+			fprintf(stderr, "Failed to erase a card.\n");
+			return (1);
+		}
+	}
+
+	if (write) {
+		card_data_dump(&cdata);
+		fprintf(stderr,
+			"Swipe a card to write data to.\n");
+		if (!ez_writer_write(&sport, true, &cdata)) {
+			fprintf(stderr, "Failed to write a card.\n");
+			return (1);
+		}
 	}
 
 	return (0);
