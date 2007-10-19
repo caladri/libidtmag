@@ -54,7 +54,7 @@ main(void)
 	}
 
 	fprintf(stderr, "Swipe a card to write previously-read data to.\n");
-	if (!ez_writer_write(&sport, &cdata)) {
+	if (!ez_writer_write(&sport, true, &cdata)) {
 		fprintf(stderr, "Failed to write a card.\n");
 		return (1);
 	}

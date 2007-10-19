@@ -9,6 +9,16 @@
 
 #define	EZ_WRITER_ESCAPE	'\x1b'
 
+static const char ez_writer_coercivity_high_string[] = {
+	EZ_WRITER_ESCAPE,
+	'x'
+};
+
+static const char ez_writer_coercivity_low_string[] = {
+	EZ_WRITER_ESCAPE,
+	'y'
+};
+
 static const char ez_writer_erase_string[] = {
 	EZ_WRITER_ESCAPE,
 	'c'
@@ -178,7 +188,7 @@ ez_writer_read(struct serial_port *sport, struct card_data *cdata)
 }
 
 bool
-ez_writer_write(struct serial_port *sport, const struct card_data *cdata)
+ez_writer_write(struct serial_port *sport, bool hico, const struct card_data *cdata)
 {
 	static const char data_block_begin[] = {
 		EZ_WRITER_ESCAPE, 's'
@@ -187,6 +197,14 @@ ez_writer_write(struct serial_port *sport, const struct card_data *cdata)
 		'?', '\x1c'
 	};
 	char write_response[2];
+
+	if (hico) {
+		if (!EZ_WRITER_WRITE(sport, ez_writer_coercivity_high_string))
+			return (false);
+	} else {
+		if (!EZ_WRITER_WRITE(sport, ez_writer_coercivity_low_string))
+			return (false);
+	}
 
 	if (!EZ_WRITER_WRITE(sport, ez_writer_write_ascii_string))
 		return (false);
