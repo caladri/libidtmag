@@ -30,7 +30,7 @@ static const char ez_writer_test_string[] = {
 #define	EZ_WRITER_WRITE(sport, buf)					\
 	serial_port_write(sport, buf, sizeof buf / sizeof buf[0])
 
-static bool ez_writer_read_until(struct serial_port *, char *, char, char, char *);
+static bool ez_writer_read_track(struct serial_port *, char *, char *);
 static bool ez_writer_reset_buffer(struct serial_port *);
 static bool ez_writer_test(struct serial_port *);
 
@@ -75,24 +75,21 @@ ez_writer_read(struct serial_port *sport, struct card_data *cdata)
 		switch (tuple[0]) {
 		case EZ_WRITER_ESCAPE:
 			switch (tuple[1]) {
-			case '1':
-				if (!ez_writer_read_until(sport,
+			case 1:
+				if (!ez_writer_read_track(sport,
 							  cdata->cd_track1,
-							  EZ_WRITER_ESCAPE, '?',
 							  tuple))
 					return (false);
 				break;
-			case '2':
-				if (!ez_writer_read_until(sport,
+			case 2:
+				if (!ez_writer_read_track(sport,
 							  cdata->cd_track2,
-							  EZ_WRITER_ESCAPE, '?',
 							  tuple))
 					return (false);
 				break;
-			case '3':
-				if (!ez_writer_read_until(sport,
+			case 3:
+				if (!ez_writer_read_track(sport,
 							  cdata->cd_track3,
-							  EZ_WRITER_ESCAPE, '?',
 							  tuple))
 					return (false);
 				break;
@@ -103,10 +100,23 @@ ez_writer_read(struct serial_port *sport, struct card_data *cdata)
 		case '?':
 			if (tuple[1] != '\x1c')
 				return (false);
+
 			/*
-			 * Read status.
+			 * Read status tuple.
 			 */
-			return (true);
+			if (!EZ_WRITER_READ(sport, tuple))
+				return (false);
+			switch (tuple[0]) {
+			case EZ_WRITER_ESCAPE:
+				switch (tuple[1]) {
+				case '0':
+					return (true);
+				default:
+					return (false);
+				}
+			default:
+				return (false);
+			}
 		default:
 			return (false);
 		}
@@ -114,18 +124,52 @@ ez_writer_read(struct serial_port *sport, struct card_data *cdata)
 }
 
 static bool
-ez_writer_read_until(struct serial_port *sport, char *track, char end1, char end2, char *tuple)
+ez_writer_read_track(struct serial_port *sport, char *track, char *tuple)
 {
 	char byte[1];
+
+	tuple[0] = tuple[1] = '\0';
 
 	for (;;) {
 		if (!EZ_WRITER_READ(sport, byte))
 			return (false);
-		if (byte[0] == end1 || byte[0] == end2) {
+		if (byte[0] == '?' || byte[0] == EZ_WRITER_ESCAPE) {
+			/*
+			 * We've hit a terminator for this track.  Store the
+			 * terminator in the first byte of the tuple and read
+			 * the next byte of the tuple so that the next track
+			 * can be read and return.
+			 */
 			tuple[0] = byte[0];
 			if (!EZ_WRITER_READ(sport, byte))
 				return (false);
 			tuple[1] = byte[0];
+
+			if (tuple[0] == EZ_WRITER_ESCAPE && tuple[1] == '*') {
+				/*
+				 * Track is empty, read the start tuple for the
+				 * next track and return.
+				 */
+				if (!EZ_WRITER_READ(sport, byte))
+					return (false);
+				tuple[0] = byte[0];
+				if (!EZ_WRITER_READ(sport, byte))
+					return (false);
+				tuple[1] = byte[0];
+			}
+			if (tuple[0] == '?' && tuple[1] == EZ_WRITER_ESCAPE) {
+				/*
+				 * Track has a terminating question mark
+				 * as well as an escape for the next track.
+				 * Go ahead and complete the start tuple for
+				 * the next track and return.
+				 */
+				if (!EZ_WRITER_READ(sport, byte))
+					return (false);
+				tuple[0] = tuple[1];
+				tuple[1] = byte[0];
+			}
+
 			return (true);
 		}
 		*track++ = byte[0];
