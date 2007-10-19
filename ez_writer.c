@@ -385,9 +385,6 @@ ez_writer_test(struct serial_port *sport)
 static bool
 ez_writer_write_track(struct serial_port *sport, unsigned track, const char *trackdata, size_t len)
 {
-	static const char track_empty[] = {
-		EZ_WRITER_ESCAPE, '*'
-	};
 	char track_begin[] = {
 		EZ_WRITER_ESCAPE, track & (1 | 2 | 3)
 	};
@@ -404,16 +401,21 @@ ez_writer_write_track(struct serial_port *sport, unsigned track, const char *tra
 		len = strlen(trackdata);
 
 	/*
-	 * If this track is empty, write ^[*, which tells the writer that the
-	 * track is present but null.
+	 * If this track is empty, write nothing, rather than ^[*, which is
+	 * what comes on read for a null track.
 	 */
-	if (len == 0) {
-		if (!EZ_WRITER_WRITE(sport, track_empty))
-			return (false);
+	if (len == 0)
 		return (true);
-	}
 
-	if (!serial_port_write(sport, trackdata, len))
+	/*
+	 * This is ridiculous.
+	 *
+	 * A read will give the start and end characters, but they do not seem
+	 * to be necessary (indeed, they are not wanted) on write.  Awful.
+	 *
+	 * Compensate by skipping the start and end characters.
+	 */
+	if (!serial_port_write(sport, trackdata + 1, len - 2))
 		return (false);
 
 	return (true);
