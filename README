@@ -1,1 +1,5 @@
 A library for interacting with ID Tech MagStripe Reader/Encoders.
+
+Note that it does not provide the USB<->RS232 device itself.  For that, see the
+FTDI USB<->Serial device driver, which is available for Mac OS X on PowerPC and
+Intel.
