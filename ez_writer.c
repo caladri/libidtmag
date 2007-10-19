@@ -197,6 +197,7 @@ ez_writer_write(struct serial_port *sport, bool hico, const struct card_data *cd
 		'?', '\x1c'
 	};
 	char write_response[2];
+	char coercivity_response[2];
 
 	if (hico) {
 		if (!EZ_WRITER_WRITE(sport, ez_writer_coercivity_high_string))
@@ -205,6 +206,13 @@ ez_writer_write(struct serial_port *sport, bool hico, const struct card_data *cd
 		if (!EZ_WRITER_WRITE(sport, ez_writer_coercivity_low_string))
 			return (false);
 	}
+
+	if (!EZ_WRITER_READ(sport, coercivity_response))
+		return (false);
+
+	if (coercivity_response[0] != EZ_WRITER_ESCAPE ||
+	    coercivity_response[1] != '0')
+		return (false);
 
 	if (!EZ_WRITER_WRITE(sport, ez_writer_write_ascii_string))
 		return (false);
