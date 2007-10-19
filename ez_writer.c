@@ -7,9 +7,19 @@
 
 #define	EZ_WRITER_ESCAPE	'\x1b'
 
-static const char ez_writer_read_ascii_string[] = { EZ_WRITER_ESCAPE, 'r' };
-static const char ez_writer_reset_buffer_string[] = { EZ_WRITER_ESCAPE, 'a' };
-static const char ez_writer_test_string[] = { EZ_WRITER_ESCAPE, 'e' };
+static const char ez_writer_read_ascii_string[] = {
+	EZ_WRITER_ESCAPE,
+	'r'
+};
+
+static const char ez_writer_reset_buffer_string[] = {
+	EZ_WRITER_ESCAPE,
+	'a'
+};
+static const char ez_writer_test_string[] = {
+	EZ_WRITER_ESCAPE,
+	'e'
+};
 
 #define	EZ_WRITER_READ(sport, buf)					\
 	serial_port_read(sport, buf, sizeof buf / sizeof buf[0])
