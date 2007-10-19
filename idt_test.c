@@ -40,14 +40,17 @@ main(void)
 	}
 	fprintf(stderr, "Initialized EZ Writer.\n");
 
-	for (;;) {
-		fprintf(stderr,
-			"Swipe a card to read when the LED changes color.\n");
-		if (!ez_writer_read(&sport, &cdata)) {
-			fprintf(stderr, "Failed to read a card.\n");
-			return (1);
-		}
-		card_data_dump(&cdata);
+	fprintf(stderr, "Swipe a card to read when the LED changes color.\n");
+	if (!ez_writer_read(&sport, &cdata)) {
+		fprintf(stderr, "Failed to read a card.\n");
+		return (1);
+	}
+	card_data_dump(&cdata);
+
+	fprintf(stderr, "Swipe a card to erase when the LED changes color.\n");
+	if (!ez_writer_erase(&sport, 1 | 2 | 3)) {
+		fprintf(stderr, "Failed to erase a card.\n");
+		return (1);
 	}
 
 	return (0);

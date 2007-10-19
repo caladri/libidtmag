@@ -9,6 +9,11 @@
 
 #define	EZ_WRITER_ESCAPE	'\x1b'
 
+static const char ez_writer_erase_string[] = {
+	EZ_WRITER_ESCAPE,
+	'c'
+};
+
 static const char ez_writer_ram_test_string[] = {
 	EZ_WRITER_ESCAPE,
 	'\x87'
@@ -55,6 +60,40 @@ ez_writer_initialize(struct serial_port *sport)
 	if (!ez_writer_reset_buffer(sport))
 		return (false);
 
+	return (true);
+}
+
+bool
+ez_writer_erase(struct serial_port *sport, unsigned mask)
+{
+	char erase_ports[1];
+	char erase_response[2];
+
+	/*
+	 * We only have three tracks.  If the user thinks otherwise, they
+	 * are a fool.
+	 */
+	if ((mask & ~(1 | 2 | 3)) != 0)
+		return (false);
+	/*
+	 * What could we possibly do to no tracks?
+	 */
+	if (mask == 0)
+		return (false);
+
+	if (!EZ_WRITER_WRITE(sport, ez_writer_erase_string))
+		return (false);
+
+	erase_ports[0] = mask;
+
+	if (!EZ_WRITER_WRITE(sport, erase_ports))
+		return (false);
+
+	if (!EZ_WRITER_READ(sport, erase_response))
+		return (false);
+
+	if (erase_response[0] != EZ_WRITER_ESCAPE || erase_response[1] != '0')
+		return (false);
 	return (true);
 }
 
