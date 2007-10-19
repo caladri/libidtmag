@@ -7,4 +7,6 @@ struct card_data {
 	char cd_track3[107];
 };
 
+void card_data_dump(struct card_data *);
+
 #endif /* !CARD_DATA_H */
