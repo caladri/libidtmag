@@ -24,6 +24,10 @@ static const char ez_writer_erase_string[] = {
 	'c'
 };
 
+static const char ez_writer_present_string[] = {
+	'9'
+};
+
 static const char ez_writer_ram_test_string[] = {
 	EZ_WRITER_ESCAPE,
 	'\x87'
@@ -55,6 +59,7 @@ static const char ez_writer_write_ascii_string[] = {
 #define	EZ_WRITER_WRITE(sport, buf)					\
 	serial_port_write(sport, buf, sizeof buf / sizeof buf[0])
 
+static bool ez_writer_present(struct serial_port *);
 static bool ez_writer_ram_test(struct serial_port *);
 static bool ez_writer_read_track(struct serial_port *, char *, char *);
 static bool ez_writer_reset_buffer(struct serial_port *);
@@ -64,6 +69,9 @@ static bool ez_writer_write_track(struct serial_port *, unsigned, const char *, 
 bool
 ez_writer_initialize(struct serial_port *sport)
 {
+	if (!ez_writer_present(sport))
+		return (false);
+
 	if (!ez_writer_reset_buffer(sport))
 		return (false);
 
@@ -239,6 +247,23 @@ ez_writer_write(struct serial_port *sport, bool hico, const struct card_data *cd
 		return (false);
 
 	if (write_response[0] != EZ_WRITER_ESCAPE || write_response[1] != '0')
+		return (false);
+	return (true);
+}
+
+static bool
+ez_writer_present(struct serial_port *sport)
+{
+	char present_response[2];
+
+	if (!EZ_WRITER_WRITE(sport, ez_writer_present_string))
+		return (false);
+
+	if (!EZ_WRITER_READ(sport, present_response))
+		return (false);
+
+	if (present_response[0] != EZ_WRITER_ESCAPE ||
+	    present_response[1] != '4')
 		return (false);
 	return (true);
 }
