@@ -1,8 +1,10 @@
 #include <sys/types.h>
+#include <sys/param.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <regex.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "serial.h"
@@ -10,13 +12,23 @@
 
 #define	SERIAL_DEVICE_DIRECTORY	"/dev"
 #define	SERIAL_DEVICE_REGEX	"^cu\\.(.+)$"
+#define	SERIAL_DEVICE_FORMAT	SERIAL_DEVICE_DIRECTORY "/cu.%s"
 
 bool
 serial_port_open(struct serial_port *sport, const char *name)
 {
+	char path[MAXPATHLEN];
+	int fd;
+
 	sport->sp_fd = -1;
-	(void)name;
-	return (false);
+
+	snprintf(path, sizeof path, SERIAL_DEVICE_FORMAT, name);
+	fd = open(path, O_RDWR);
+	if (fd == -1)
+		return (false);
+	sport->sp_fd = fd;
+
+	return (true);
 }
 
 struct string_set *

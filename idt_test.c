@@ -90,6 +90,7 @@ choose_serial_port(struct serial_port *sport)
 		string_set_free(serial_ports);
 		return (false);
 	}
+	fprintf(pc.pc_handle, "Serial port opened successfully.\n");
 	string_set_free(serial_ports);
 	return (true);
 }
