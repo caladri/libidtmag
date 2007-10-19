@@ -133,47 +133,41 @@ ez_writer_read_track(struct serial_port *sport, char *track, char *tuple)
 	for (;;) {
 		if (!EZ_WRITER_READ(sport, byte))
 			return (false);
-		if (byte[0] == '?' || byte[0] == EZ_WRITER_ESCAPE) {
+
+		if (byte[0] == EZ_WRITER_ESCAPE) {
 			/*
-			 * We've hit a terminator for this track.  Store the
-			 * terminator in the first byte of the tuple and read
-			 * the next byte of the tuple so that the next track
-			 * can be read and return.
+			 * We've hit an escape, which is probably indicating
+			 * that this track is empty.  Make sure that that's
+			 * the case, and then return the next tuple.
 			 */
-			tuple[0] = byte[0];
 			if (!EZ_WRITER_READ(sport, byte))
 				return (false);
-			tuple[1] = byte[0];
-
-			if (tuple[0] == EZ_WRITER_ESCAPE && tuple[1] == '*') {
-				/*
-				 * Track is empty, read the start tuple for the
-				 * next track and return.
-				 */
-				if (!EZ_WRITER_READ(sport, byte))
-					return (false);
-				tuple[0] = byte[0];
-				if (!EZ_WRITER_READ(sport, byte))
-					return (false);
-				tuple[1] = byte[0];
-			}
-			if (tuple[0] == '?' && tuple[1] == EZ_WRITER_ESCAPE) {
-				/*
-				 * Track has a terminating question mark
-				 * as well as an escape for the next track.
-				 * Go ahead and complete the start tuple for
-				 * the next track and return.
-				 */
-				if (!EZ_WRITER_READ(sport, byte))
-					return (false);
-				tuple[0] = tuple[1];
-				tuple[1] = byte[0];
-			}
-
-			return (true);
+			if (byte[0] != '*')
+				return (false);
+			goto next_tuple;
 		}
+
 		*track++ = byte[0];
+
+		if (byte[0] == '?') {
+			/*
+			 * We've hit the terminator for this track.  Return the
+			 * next tuple.
+			 */
+			goto next_tuple;
+		}
 	}
+
+next_tuple:
+	if (!EZ_WRITER_READ(sport, byte))
+		return (false);
+	tuple[0] = byte[0];
+
+	if (!EZ_WRITER_READ(sport, byte))
+		return (false);
+	tuple[1] = byte[0];
+
+	return (true);
 }
 
 static bool
