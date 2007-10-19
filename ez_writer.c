@@ -48,6 +48,11 @@ static const char ez_writer_test_string[] = {
 	'e'
 };
 
+static const char ez_writer_version_string[] = {
+	EZ_WRITER_ESCAPE,
+	'u'
+};
+
 static const char ez_writer_write_ascii_string[] = {
 	EZ_WRITER_ESCAPE,
 	'w'
@@ -193,6 +198,25 @@ ez_writer_read(struct serial_port *sport, struct card_data *cdata)
 			return (false);
 		}
 	}
+}
+
+bool
+ez_writer_version(struct serial_port *sport, char *buf, size_t len)
+{
+	char version_response[EZ_WRITER_VERSION_LENGTH];
+
+	if (len != EZ_WRITER_VERSION_LENGTH + 1)
+		return (false);
+
+	if (!EZ_WRITER_WRITE(sport, ez_writer_version_string))
+		return (false);
+
+	if (!EZ_WRITER_READ(sport, version_response))
+		return (false);
+
+	memcpy(buf, version_response, EZ_WRITER_VERSION_LENGTH);
+	buf[EZ_WRITER_VERSION_LENGTH] = '\0';
+	return (true);
 }
 
 bool

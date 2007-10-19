@@ -26,6 +26,7 @@ static void print_serial_port(void *, const char *);
 int
 main(void)
 {
+	char version[EZ_WRITER_VERSION_LENGTH + 1];
 	struct serial_port sport;
 	struct card_data cdata;
 
@@ -39,6 +40,12 @@ main(void)
 		return (1);
 	}
 	fprintf(stderr, "Initialized EZ Writer.\n");
+
+	if (!ez_writer_version(&sport, version, EZ_WRITER_VERSION_LENGTH + 1)) {
+		fprintf(stderr, "Unable to get EZ Writer version.\n");
+		return (1);
+	}
+	fprintf(stderr, "Version: %.*s\n", EZ_WRITER_VERSION_LENGTH, version);
 
 	fprintf(stderr, "Swipe a card to read when the LED changes color.\n");
 	if (!ez_writer_read(&sport, &cdata)) {
