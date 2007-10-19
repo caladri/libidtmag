@@ -16,6 +16,7 @@ static const char ez_writer_reset_buffer_string[] = {
 	EZ_WRITER_ESCAPE,
 	'a'
 };
+
 static const char ez_writer_test_string[] = {
 	EZ_WRITER_ESCAPE,
 	'e'
