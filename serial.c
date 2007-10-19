@@ -21,9 +21,9 @@
 bool
 serial_port_open(struct serial_port *sport, const char *name)
 {
-	//struct termios control;
+	struct termios control;
 	char path[MAXPATHLEN];
-	//int error;
+	int error;
 	int fd;
 
 	sport->sp_fd = -1;
@@ -34,7 +34,6 @@ serial_port_open(struct serial_port *sport, const char *name)
 		return (false);
 	sport->sp_fd = fd;
 
-#if 0
 	error = ioctl(sport->sp_fd, TIOCEXCL);
 	if (error != 0) {
 		close(sport->sp_fd);
@@ -63,7 +62,6 @@ serial_port_open(struct serial_port *sport, const char *name)
 	control.c_cflag &= ~CSIZE;
 	control.c_cflag |= CS8;
 	control.c_cflag |= CLOCAL;
-	control.c_cflag |= CREAD;
 
 	control.c_iflag |= IXON | IXOFF;
 
@@ -76,7 +74,6 @@ serial_port_open(struct serial_port *sport, const char *name)
 		sport->sp_fd = -1;
 		return (false);
 	}
-#endif
 
 	return (true);
 }
