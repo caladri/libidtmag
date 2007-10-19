@@ -34,6 +34,11 @@ static const char ez_writer_test_string[] = {
 	'e'
 };
 
+static const char ez_writer_write_ascii_string[] = {
+	EZ_WRITER_ESCAPE,
+	'w'
+};
+
 #define	EZ_WRITER_READ(sport, buf)					\
 	serial_port_read(sport, buf, sizeof buf / sizeof buf[0])
 
@@ -44,6 +49,7 @@ static bool ez_writer_ram_test(struct serial_port *);
 static bool ez_writer_read_track(struct serial_port *, char *, char *);
 static bool ez_writer_reset_buffer(struct serial_port *);
 static bool ez_writer_test(struct serial_port *);
+static bool ez_writer_write_track(struct serial_port *, unsigned, const char *, size_t);
 
 bool
 ez_writer_initialize(struct serial_port *sport)
@@ -171,6 +177,46 @@ ez_writer_read(struct serial_port *sport, struct card_data *cdata)
 	}
 }
 
+bool
+ez_writer_write(struct serial_port *sport, const struct card_data *cdata)
+{
+	static const char data_block_begin[] = {
+		EZ_WRITER_ESCAPE, 's'
+	};
+	static const char data_block_end[] = {
+		'?', '\x1c'
+	};
+	char write_response[2];
+
+	if (!EZ_WRITER_WRITE(sport, ez_writer_write_ascii_string))
+		return (false);
+
+	if (!EZ_WRITER_WRITE(sport, data_block_begin))
+		return (false);
+
+	if (!ez_writer_write_track(sport, '\x1', cdata->cd_track1,
+				   sizeof cdata->cd_track1 / sizeof cdata->cd_track1[0]))
+		return (false);
+
+	if (!ez_writer_write_track(sport, '\x2', cdata->cd_track2,
+				   sizeof cdata->cd_track2 / sizeof cdata->cd_track2[0]))
+		return (false);
+
+	if (!ez_writer_write_track(sport, '\x3', cdata->cd_track3,
+				   sizeof cdata->cd_track3 / sizeof cdata->cd_track3[0]))
+		return (false);
+
+	if (!EZ_WRITER_WRITE(sport, data_block_end))
+		return (false);
+
+	if (!EZ_WRITER_READ(sport, write_response))
+		return (false);
+
+	if (write_response[0] != EZ_WRITER_ESCAPE || write_response[1] != '0')
+		return (false);
+	return (true);
+}
+
 static bool
 ez_writer_ram_test(struct serial_port *sport)
 {
@@ -258,5 +304,42 @@ ez_writer_test(struct serial_port *sport)
 
 	if (test_response[0] != EZ_WRITER_ESCAPE || test_response[1] != 'y')
 		return (false);
+	return (true);
+}
+
+static bool
+ez_writer_write_track(struct serial_port *sport, unsigned track, const char *trackdata, size_t len)
+{
+	static const char track_empty[] = {
+		EZ_WRITER_ESCAPE, '*'
+	};
+	char track_begin[] = {
+		EZ_WRITER_ESCAPE, track & (1 | 2 | 3)
+	};
+
+	if (!EZ_WRITER_WRITE(sport, track_begin))
+		return (false);
+
+	/*
+	 * If we are not using up a complete field, set the len to the length
+	 * we are using.  Note that we are requiring the trackdata to be ASCII
+	 * NUL terminated.
+	 */
+	if (memchr(trackdata, '\0', len) != NULL)
+		len = strlen(trackdata);
+
+	/*
+	 * If this track is empty, write ^[*, which tells the writer that the
+	 * track is present but null.
+	 */
+	if (len == 0) {
+		if (!EZ_WRITER_WRITE(sport, track_empty))
+			return (false);
+		return (true);
+	}
+
+	if (!serial_port_write(sport, trackdata, len))
+		return (false);
+
 	return (true);
 }
