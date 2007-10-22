@@ -21,7 +21,7 @@ struct print_context {
 	FILE *pc_handle;
 };
 
-static bool choose_serial_port(struct serial_port *);
+static bool choose_serial_port(struct serial_port *, const char *);
 static void pick_serial_port(void *, const char *);
 static void print_serial_port(void *, const char *);
 
@@ -30,12 +30,14 @@ main(int argc, char *argv[])
 {
 	char version[EZ_WRITER_VERSION_LENGTH + 1];
 	struct serial_port sport;
-	bool read, write, erase;
+	bool doread, dowrite, doerase;
 	struct card_data cdata;
+	const char *portname;
 	int ch;
 
 	memset(&cdata, 0, sizeof cdata);
-	read = write = erase = false;
+	doread = dowrite = doerase = false;
+	portname = NULL;
 
 	while ((ch = getopt(argc, argv, "1:2:3:rwe?")) != -1) {
 		switch (ch) {
@@ -49,23 +51,31 @@ main(int argc, char *argv[])
 			strlcpy(cdata.cd_track3, optarg, sizeof cdata.cd_track3);
 			break;
 		case 'r':
-			read = true;
+			doread = true;
 			break;
 		case 'w':
-			write = true;
+			dowrite = true;
 			break;
 		case 'e':
-			erase = true;
+			doerase = true;
 			break;
 		case '?':
-		default:
+		default: /* XXX usage */
 			return (1);
 		}
 	}
 	argc -= optind;
 	argv += optind;
 
-	if (!choose_serial_port(&sport)) {
+	if (argc == 1) {
+		argc--;
+		portname = *argv++;
+	}
+
+	if (argc != 0) /* XXX usage */
+		return (1);
+
+	if (!choose_serial_port(&sport, portname)) {
 		fprintf(stderr, "Unable to attach serial port.\n");
 		return (1);
 	}
@@ -82,7 +92,7 @@ main(int argc, char *argv[])
 	}
 	fprintf(stderr, "Version: %.*s\n", EZ_WRITER_VERSION_LENGTH, version);
 
-	if (read) {
+	if (doread) {
 		fprintf(stderr,
 			"Swipe a card to read when the LED changes color.\n");
 		if (!ez_writer_read(&sport, &cdata)) {
@@ -92,7 +102,7 @@ main(int argc, char *argv[])
 		card_data_dump(&cdata);
 	}
 
-	if (erase) {
+	if (doerase) {
 		fprintf(stderr,
 			"Swipe a card to erase when the LED changes color.\n");
 		if (!ez_writer_erase(&sport, 1 | 2 | 3)) {
@@ -101,7 +111,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (write) {
+	if (dowrite) {
 		card_data_dump(&cdata);
 		fprintf(stderr,
 			"Swipe a card to write data to.\n");
@@ -115,7 +125,7 @@ main(int argc, char *argv[])
 }
 
 static bool
-choose_serial_port(struct serial_port *sport)
+choose_serial_port(struct serial_port *sport, const char *portname)
 {
 	struct string_set *serial_ports;
 	struct print_context pc;
@@ -125,6 +135,11 @@ choose_serial_port(struct serial_port *sport)
 
 	pc.pc_counter = 0;
 	pc.pc_handle = stdout;
+
+	if (portname != NULL) {
+		serial_ports = NULL;
+		goto open_port;
+	}
 
 	serial_ports = serial_port_enumerate();
 	string_set_foreach(serial_ports, print_serial_port, &pc);
@@ -165,14 +180,19 @@ choose_serial_port(struct serial_port *sport)
 		return (false);
 	}
 
-	fprintf(pc.pc_handle, "Serial port selected: %s\n", pk.pc_name);
+	portname = pk.pc_name;
 
-	if (!serial_port_open(sport, pk.pc_name)) {
-		string_set_free(serial_ports);
+open_port:
+	fprintf(pc.pc_handle, "Serial port selected: %s\n", portname);
+
+	if (!serial_port_open(sport, portname)) {
+		if (serial_ports != NULL)
+			string_set_free(serial_ports);
 		return (false);
 	}
 	fprintf(pc.pc_handle, "Serial port opened successfully.\n");
-	string_set_free(serial_ports);
+	if (serial_ports != NULL)
+		string_set_free(serial_ports);
 	return (true);
 }
 
