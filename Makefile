@@ -5,7 +5,7 @@ SRCS+=	ez_writer.c
 SRCS+=	serial.c
 SRCS+=	string_set.c
 NOMAN=	t
-WARNS=	3
+WARNS=	6
 
 .include <bsd.prog.mk>
 
