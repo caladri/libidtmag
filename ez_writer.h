@@ -1,6 +1,9 @@
 #ifndef	EZ_WRITER_H
 #define	EZ_WRITER_H
 
+#define	EZ_WRITER_TRACK_TO_BITMASK(track)				\
+	((1) << ((track) & (1 | 2 | 3)))
+
 struct card_data;
 struct serial_port;
 

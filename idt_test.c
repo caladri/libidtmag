@@ -105,7 +105,10 @@ main(int argc, char *argv[])
 	if (doerase) {
 		fprintf(stderr,
 			"Swipe a card to erase when the LED changes color.\n");
-		if (!ez_writer_erase(&sport, 1 | 2 | 3)) {
+		if (!ez_writer_erase(&sport,
+				     EZ_WRITER_TRACK_TO_BITMASK(1) |
+				     EZ_WRITER_TRACK_TO_BITMASK(2) |
+				     EZ_WRITER_TRACK_TO_BITMASK(3))) {
 			fprintf(stderr, "Failed to erase a card.\n");
 			return (1);
 		}

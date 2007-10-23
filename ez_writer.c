@@ -102,7 +102,9 @@ ez_writer_erase(struct serial_port *sport, unsigned mask)
 	 * We only have three tracks.  If the user thinks otherwise, they
 	 * are a fool.
 	 */
-	if ((mask & ~(1 | 2 | 3)) != 0)
+	if ((mask & ~(EZ_WRITER_TRACK_TO_BITMASK(1) |
+		      EZ_WRITER_TRACK_TO_BITMASK(2) |
+		      EZ_WRITER_TRACK_TO_BITMASK(3))) != 0)
 		return (false);
 	/*
 	 * What could we possibly do to no tracks?
@@ -386,7 +388,9 @@ static bool
 ez_writer_write_track(struct serial_port *sport, unsigned track, const char *trackdata, size_t len)
 {
 	char track_begin[] = {
-		EZ_WRITER_ESCAPE, track & (1 | 2 | 3)
+		EZ_WRITER_ESCAPE, track & (EZ_WRITER_TRACK_TO_BITMASK(1) |
+					   EZ_WRITER_TRACK_TO_BITMASK(2) |
+					   EZ_WRITER_TRACK_TO_BITMASK(3))
 	};
 
 	if (!EZ_WRITER_WRITE(sport, track_begin))
