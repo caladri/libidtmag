@@ -89,10 +89,8 @@ serial_port_read(struct serial_port *sport, char *buf, size_t len)
 	rv = read(sport->sp_fd, buf, len);
 	if (rv == -1)
 		return (false);
-	if (len != (size_t)rv) {
+	if (len != (size_t)rv)
 		return (serial_port_read(sport, buf + rv, len - rv));
-		return (false);
-	}
 	return (true);
 }
 
